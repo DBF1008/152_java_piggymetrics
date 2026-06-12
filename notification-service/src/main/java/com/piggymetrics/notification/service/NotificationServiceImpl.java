@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -25,6 +27,19 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@Autowired
 	private EmailService emailService;
+
+	/**
+	 * Executor running the per-recipient notification tasks. Defaults to the shared
+	 * {@link ForkJoinPool#commonPool()} - the same pool a bare
+	 * {@code CompletableFuture.runAsync(task)} would use - so production behaviour is
+	 * unchanged. It is a seam: tests inject a same-thread executor to make the
+	 * asynchronous fan-out deterministic.
+	 */
+	private Executor executor = ForkJoinPool.commonPool();
+
+	void setExecutor(Executor executor) {
+		this.executor = executor;
+	}
 
 	@Override
 	@Scheduled(cron = "${backup.cron}")
@@ -43,7 +58,7 @@ public class NotificationServiceImpl implements NotificationService {
 			} catch (Throwable t) {
 				log.error("an error during backup notification for {}", recipient, t);
 			}
-		}));
+		}, executor));
 	}
 
 	@Override
@@ -62,6 +77,6 @@ public class NotificationServiceImpl implements NotificationService {
 			} catch (Throwable t) {
 				log.error("an error during remind notification for {}", recipient, t);
 			}
-		}));
+		}, executor));
 	}
 }
