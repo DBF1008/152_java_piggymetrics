@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -26,6 +29,9 @@ public class NotificationServiceImpl implements NotificationService {
 	@Autowired
 	private EmailService emailService;
 
+	@Autowired(required = false)
+	private Executor notificationExecutor = ForkJoinPool.commonPool();
+
 	@Override
 	@Scheduled(cron = "${backup.cron}")
 	public void sendBackupNotifications() {
@@ -35,15 +41,19 @@ public class NotificationServiceImpl implements NotificationService {
 		List<Recipient> recipients = recipientService.findReadyToNotify(type);
 		log.info("found {} recipients for backup notification", recipients.size());
 
-		recipients.forEach(recipient -> CompletableFuture.runAsync(() -> {
-			try {
-				String attachment = client.getAccount(recipient.getAccountName());
-				emailService.send(type, recipient, attachment);
-				recipientService.markNotified(type, recipient);
-			} catch (Throwable t) {
-				log.error("an error during backup notification for {}", recipient, t);
-			}
-		}));
+		List<CompletableFuture<Void>> futures = recipients.stream()
+			.map(recipient -> CompletableFuture.runAsync(() -> {
+				try {
+					String attachment = client.getAccount(recipient.getAccountName());
+					emailService.send(type, recipient, attachment);
+					recipientService.markNotified(type, recipient);
+				} catch (Throwable t) {
+					log.error("an error during backup notification for {}", recipient, t);
+				}
+			}, notificationExecutor))
+			.collect(Collectors.toList());
+
+		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 	}
 
 	@Override
@@ -55,13 +65,17 @@ public class NotificationServiceImpl implements NotificationService {
 		List<Recipient> recipients = recipientService.findReadyToNotify(type);
 		log.info("found {} recipients for remind notification", recipients.size());
 
-		recipients.forEach(recipient -> CompletableFuture.runAsync(() -> {
-			try {
-				emailService.send(type, recipient, null);
-				recipientService.markNotified(type, recipient);
-			} catch (Throwable t) {
-				log.error("an error during remind notification for {}", recipient, t);
-			}
-		}));
+		List<CompletableFuture<Void>> futures = recipients.stream()
+			.map(recipient -> CompletableFuture.runAsync(() -> {
+				try {
+					emailService.send(type, recipient, null);
+					recipientService.markNotified(type, recipient);
+				} catch (Throwable t) {
+					log.error("an error during remind notification for {}", recipient, t);
+				}
+			}, notificationExecutor))
+			.collect(Collectors.toList());
+
+		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 	}
 }
