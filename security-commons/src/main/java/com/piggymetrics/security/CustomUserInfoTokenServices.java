@@ -1,4 +1,4 @@
-package com.piggymetrics.statistics.service.security;
+package com.piggymetrics.security;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

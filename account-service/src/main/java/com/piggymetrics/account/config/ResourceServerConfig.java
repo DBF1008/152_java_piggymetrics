@@ -1,6 +1,6 @@
 package com.piggymetrics.account.config;
 
-import com.piggymetrics.account.service.security.CustomUserInfoTokenServices;
+import com.piggymetrics.security.CustomUserInfoTokenServices;
 import feign.RequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.oauth2.resource.ResourceServerProperties;
