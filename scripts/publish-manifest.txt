@@ -1,0 +1,23 @@
+# PiggyMetrics publish manifest — the single source of truth for the Docker
+# images that CI builds and pushes. One image per line, in publish order:
+#
+#     <build-context-dir>            # repo defaults to sqshq/piggymetrics-<dir>
+#     <build-context-dir>  <repo>    # ...or pin an explicit repo in column 2
+#
+# Adding a service = add its directory here and give it a Dockerfile. Removing
+# one = delete its line. scripts/check-manifest.sh keeps this list in lock-step
+# with the Dockerfile directories and the docker-compose.yml image references;
+# it runs in CI (before_script) and is meant to be run locally too.
+#
+# Blank lines and lines starting with '#' are ignored.
+
+config
+registry
+gateway
+auth-service
+account-service
+statistics-service
+notification-service
+monitoring
+turbine-stream-service
+mongodb

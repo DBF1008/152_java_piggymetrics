@@ -14,69 +14,14 @@ env:
     - secure: "VRlJyPOz7fUmtFdpTdO51BVcjKUGP5t7KF5bG7TSJPXsal7SSxjt6desLQ6zv31tKBp/SrgbnH4hloeAe38hL1I5gQKLPuNjOYhtolgLHlCO3aJiJ0vn0o6mgxOok4S/ul6EMy8VLbKzwt7GrruoaDNVadwc98NY+Grr1eLUzD5CVxa4luSahtKASheCtM29OQOj42Ivnc/MUUMYMymYa/zgIkROqI1ZbQK12NGwx13FzjjF2C9WyTR8IMFOeiuL/Ha8wxT2VeYExWkNw8TQKg35WT26axSoI92BBjPHY+l4IDQ0g8N176sAG52gbz4WXx60kRgqHrn+b5cjO/v1PknqXCqwWVrskm/mgGxJ4IVmpqa7ItDYtoVPzW4hyPsEHWyPMjii5280VdqVRueHyxSBH/uF3iQCDwR0hRdVnPPvgrt40/jbiD3pBhnDQErHCu54FA7uzfFT8LUvj3PgHn19KWAb4gKMpP0AZA3aDOD/3+db1x25ozhDXoCLPFk+kK0lp5mwTKka910lX4L25wp2P3RDdbGQTeVjBBp5+IxzfBuF7m2aEww7HgpB/TmHGaxo61cZfLFwcU2tfIQnPVRiomMqh85xFHIkDETNJJMdV1o+Im5maOzg3u5iy7E6dJec6jTYSCIzh6BemM+scYVZzLkYZVRyrUQkUj7ldoI=" # DOCKER_PASS
     - COMMIT=${TRAVIS_COMMIT::7}
 
+before_script:
+  # Guard the publish manifest before anything is built or pushed.
+  - bash scripts/check-manifest.sh
+
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
 
-  #TAG
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-
-  # CONFIG SERVICE
-  - export CONFIG=sqshq/piggymetrics-config
-  - docker build -t $CONFIG:$COMMIT ./config
-  - docker tag $CONFIG:$COMMIT $CONFIG:$TAG
-  - docker push $CONFIG
-
-  # REGISTRY
-  - export REGISTRY=sqshq/piggymetrics-registry
-  - docker build -t $REGISTRY:$COMMIT ./registry
-  - docker tag $REGISTRY:$COMMIT $REGISTRY:$TAG
-  - docker push $REGISTRY
-
-  # GATEWAY
-  - export GATEWAY=sqshq/piggymetrics-gateway
-  - docker build -t $GATEWAY:$COMMIT ./gateway
-  - docker tag $GATEWAY:$COMMIT $GATEWAY:$TAG
-  - docker push $GATEWAY
-
-  # AUTH SERVICE
-  - export AUTH_SERVICE=sqshq/piggymetrics-auth-service
-  - docker build -t $AUTH_SERVICE:$COMMIT ./auth-service
-  - docker tag $AUTH_SERVICE:$COMMIT $AUTH_SERVICE:$TAG
-  - docker push $AUTH_SERVICE
-
-  # ACCOUNT SERVICE
-  - export ACCOUNT_SERVICE=sqshq/piggymetrics-account-service
-  - docker build -t $ACCOUNT_SERVICE:$COMMIT ./account-service
-  - docker tag $ACCOUNT_SERVICE:$COMMIT $ACCOUNT_SERVICE:$TAG
-  - docker push $ACCOUNT_SERVICE
-
-  # STATISTICS SERVICE
-  - export STATISTICS_SERVICE=sqshq/piggymetrics-statistics-service
-  - docker build -t $STATISTICS_SERVICE:$COMMIT ./statistics-service
-  - docker tag $STATISTICS_SERVICE:$COMMIT $STATISTICS_SERVICE:$TAG
-  - docker push $STATISTICS_SERVICE
-
-  # NOTIFICATION_SERVICE
-  - export NOTIFICATION_SERVICE=sqshq/piggymetrics-notification-service
-  - docker build -t $NOTIFICATION_SERVICE:$COMMIT ./notification-service
-  - docker tag $NOTIFICATION_SERVICE:$COMMIT $NOTIFICATION_SERVICE:$TAG
-  - docker push $NOTIFICATION_SERVICE
-
-  # MONITORING
-  - export MONITORING=sqshq/piggymetrics-monitoring
-  - docker build -t $MONITORING:$COMMIT ./monitoring
-  - docker tag $MONITORING:$COMMIT $MONITORING:$TAG
-  - docker push $MONITORING
-
-  # TURBINE STREAM SERVICE
-  - export TURBINE=sqshq/piggymetrics-turbine-stream-service
-  - docker build -t $TURBINE:$COMMIT ./turbine-stream-service
-  - docker tag $TURBINE:$COMMIT $TURBINE:$TAG
-  - docker push $TURBINE
-
-  # MONGO DB
-  - export MONGO_DB=sqshq/piggymetrics-mongodb
-  - docker build -t $MONGO_DB:$COMMIT ./mongodb
-  - docker tag $MONGO_DB:$COMMIT $MONGO_DB:$TAG
-  - docker push $MONGO_DB
+  # Build, tag (by commit + branch) and push every image in the manifest.
+  # The full publish list lives in scripts/publish-manifest.txt.
+  - bash scripts/publish-images.sh
